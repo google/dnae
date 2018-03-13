@@ -180,7 +180,7 @@ class DBMConnector(object):
           temp_row = TextUtils.removequotes(temp_row)
           temp_row = TextUtils.removenewlines(temp_row)
         data.append(temp_row)
-    logging.debug('Report data retreived. Number of lines: %s', len(data))
+    logging.debug('Report data retrieved. Number of lines: %s', len(data))
     # We remove the last row (with totals) only if there's more than one entry
     # (or totals will not be there)
     if (remove_last_row) and (len(data) > 2):
@@ -341,17 +341,17 @@ class DBMConnector(object):
     """
     et = 0
     retry_attempts = 0
+    max_wait_time = 500
     while True:
       request = self.__api.queries().getquery(queryId=query_id)
       result = APIRequest(request).execute()
       if 'googleCloudStoragePathForLatestReport' in result['metadata']:
         if len(result['metadata']['googleCloudStoragePathForLatestReport']) > 1:
           break
-      seconds = 2 ** retry_attempts
+      wait_time = min(max_wait_time, 2 ** retry_attempts)
       retry_attempts += 1
-      retry_attempts %= 9  # reset to 0 if >8
-      time.sleep(seconds)
-      et += seconds
+      time.sleep(wait_time)
+      et += wait_time
       if et > DBMConnector._DBM_TIMEOUT:
         raise DBMAPITimeOut(
             'DBM API Request Timeout (getquery) - Query ID: %s' % query_id)

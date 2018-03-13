@@ -36,8 +36,8 @@ class ServiceExampleLauncher(webapp2.RequestHandler):
 
     # In this example, we're mocking the config parameters (DCM partner and
     # advertiser IDs respectively):
-    config_data = [['7480', '4299564'],
-                   ['2515', '4299562']]
+    config_data = [['1234', '1111111'],
+                   ['5678', '2222222']]
     # In a real life scenario, you might want to use an external data source,
     # such as a Google Sheet doc through the Sheet connector:
     # config_doc = GSheetConnector(CREDENTIAL_FILE)

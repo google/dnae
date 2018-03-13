@@ -37,7 +37,7 @@ class GCPTable(object):
   """Representation of a BigQuery table."""
 
   def __init__(self, schema, encoding='UTF-8'):
-    self.table = list()
+    self.__table = list()
     self.schema = schema
     self.encoding = encoding
 
@@ -117,7 +117,7 @@ class GCPTable(object):
                           'at position %s', idx, field.get('name'))
       idx += 1
 
-    self.table.append(row)
+    self.__table.append(row)
 
   def dumptofile(self, filename):
     """Writes table to file.
@@ -152,7 +152,7 @@ class GCPTable(object):
       column_names.append(field.get('name'))
     rows = list()
     rows.append(column_names)
-    for row in self.table:
+    for row in self.__table:
       rows.append(row)
     return rows
 
@@ -587,7 +587,8 @@ class GCPConnector(object):
 
   def gce_waitforoperation(self, opname):
     assert self.gce_zone
-    while True:
+    retries_left = 120
+    while (retries_left > 0):
       request = self.__gceapi.zoneOperations().get(
           project=self.project_id, zone=self.gce_zone, operation=opname)
       result = APIRequest(request).execute()
@@ -596,6 +597,8 @@ class GCPConnector(object):
           raise Exception(result['error'])
         return result
       time.sleep(1)
+      retries_left -= 1
+    raise Exception('Timeout')
 
   # Google Datastore methods
 

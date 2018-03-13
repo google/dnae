@@ -1,11 +1,11 @@
-# DNA - DDM Network Analysis
+# DNAE - DoubleClick Network Analysis Enabler
 
 A data integration framework built on top of DoubleClick APIs and Google Cloud
 Platform.
 
 ## OVERVIEW
 
-DNA implements an ETL-like framework that can extract data from the DoubleClick
+DNAE implements an ETL-like framework that can extract data from the DoubleClick
 Digital Marketing platforms (DBM, DCM, DS), transform it as necessary and load
 transformed data onto Google Cloud Storage and Big Query.
 Taking advantage of the built-in BigQuery connector, Google DataStudio can be
@@ -15,9 +15,9 @@ different kind of ETL flows and data insights.
 
 Please note that this is not an officially supported Google product.
 
-## INITIAL SETUP OF A DNA PROJECT
+## INITIAL SETUP OF A DNAE PROJECT
 
-Note: the following steps illustrate how to set up your DNA project using the
+Note: the following steps illustrate how to set up your DNAE project using the
 included setup scripts. Feel free to customize your setup installing the
 necessary files manually.
 
@@ -53,7 +53,7 @@ necessary files manually.
         gcloud auth application-default login
         ```
 
-*   Run the script to setup the DNA project, and follow the instructions:
+*   Run the script to setup the DNAE project, and follow the instructions:
 
     ```shell
     python dna_project_setup.py
@@ -64,6 +64,10 @@ necessary files manually.
         project, give you instructions on which APIs to enable, guide you to the
         setup of the needed Credentials and update the template files with the
         IDs and the access details of your specific implementation
+    -   DNAE uses v2 of the Task Queue REST API (now called Cloud Task API).
+        This version is currently in "alpha" and you might need to have your
+        account whitelisted in order to use the API (search the Cloud
+        documentation for the latest status).
     -   If something goes wrong, you can run the followins script to restore the
         files to previous backup:
 
@@ -71,7 +75,7 @@ necessary files manually.
         python dna_restore_backup.py
         ```
 
-*   DNA (minus your specific _service_) is ready! Deploy the files to App
+*   DNAE (minus your specific _service_) is ready! Deploy the files to App
     Engine:
 
     ```shell
@@ -86,7 +90,7 @@ necessary files manually.
     -   Last but not least you should see your source files and scripts in the
         correspondent Cloud Storage buckets
 
-*   You will now need to build your own _service_ to add to the DNA framework.
+*   You will now need to build your own _service_ to add to the DNAE framework.
 
     -   You can start running the following command to create the service folder
         and the main files you need (starting from the template files in
@@ -98,7 +102,7 @@ necessary files manually.
 
     -   Have a look at the sample service in folder “services/service-example”
         to see how you can interact with the DoubleClick APIs through the
-        connectors included in DNA, how to get the configuration data from an
+        connectors included in DNAE, how to get the configuration data from an
         external Spreadsheet, how to elaborate the data before pushing it to Big
         Query and so on..
 
@@ -129,9 +133,9 @@ necessary files manually.
                 Back Window (i.e. the number of days after which report files
                 are removed from GCS)
 
-## More info about a DNA service
+## More info about a DNAE service
 
-A typical DNA-based service folder will include:
+A typical DNAE-based service folder will include:
 
 *   a _settings_ file, e.g. `service_example_settings.py` (in fact, see the
     files in folder `service-example` as reference)
@@ -184,9 +188,9 @@ A typical DNA-based service folder will include:
         q.add(taskqueue.Task(payload=payload_str, method='PULL'))
         ```
 
-## DNA libraries and folders
+## DNAE libraries and folders
 
-The standard DNA setup has:
+The standard DNAE setup has:
 
 *   A `lib` folder, which has
 

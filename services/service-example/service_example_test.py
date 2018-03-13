@@ -57,8 +57,8 @@ def main():
 
     # In this example, we're mocking the config parameters (DCM partner and
     # advertiser IDs respectively):
-    config_data = [['7480', '4299564'],
-                   ['2515', '4299562']]
+    config_data = [['1234', '1111111'],
+                   ['5678', '2222222']]
 
     for row in config_data:
 

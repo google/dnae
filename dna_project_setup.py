@@ -123,7 +123,7 @@ def main():
   print 'https://console.cloud.google.com/apis/library?project=%s' % project_id
   print 'and enable these APIs needed by the tool:'
   print '- Compute Engine API'
-  print '- Cloud Tasks API'
+  print '- Cloud Tasks API (might need to get your account whitelisted)'
   print 'Also enable all the DoubleClick APIs you\'ll need to use:'
   print '- DCM/DFA Reporting And Trafficking API'
   print '- DoubleClick Search API'

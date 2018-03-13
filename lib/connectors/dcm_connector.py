@@ -297,6 +297,7 @@ class DCMConnector(object):
 
     et = 0
     retry_attempts = 0
+    max_wait_time = 500
     while True:
       if result['status'] == 'REPORT_AVAILABLE':
         request = self.__api.files().get_media(
@@ -309,11 +310,10 @@ class DCMConnector(object):
           unused_status, done = downloader.next_chunk(num_retries=4)
         data.seek(0)
         return data
-      seconds = 2 ** retry_attempts
+      wait_time = min(max_wait_time, 2 ** retry_attempts)
       retry_attempts += 1
-      retry_attempts %= 11  # reset to 0 if >10
-      time.sleep(seconds)
-      et += seconds
+      time.sleep(wait_time)
+      et += wait_time
       if et >= DCMConnector._DCM_TIMEOUT:
         raise DCMAPITimeOut('DCM API Request Timeout (files.get())')
 

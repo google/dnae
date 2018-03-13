@@ -139,6 +139,7 @@ class DSConnector(object):
 
     et = 0
     retry_attempts = 0
+    max_wait_time = 500
     while True:
       if result['isReportReady']:
         request = self.__api.reports().getFile(
@@ -151,11 +152,10 @@ class DSConnector(object):
           unused_status, done = downloader.next_chunk()
         data.seek(0)
         return data
-      seconds = 2 ** retry_attempts
+      wait_time = min(max_wait_time, 2 ** retry_attempts)
       retry_attempts += 1
-      retry_attempts %= 11  # reset to 0 if >10
-      time.sleep(seconds)
-      et += seconds
+      time.sleep(wait_time)
+      et += wait_time
       if et >= DSConnector._DS_TIMEOUT:
         raise DSAPITimeOut('DS API Request Timeout (files.get())')
 

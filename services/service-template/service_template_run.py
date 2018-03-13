@@ -34,7 +34,6 @@ from service_template_settings import GBQ_TABLE
 from service_template_settings import SERVICE_NAME
 from utils import TextUtils
 
-# Configure logging
 configure_logging()
 logger = logging.getLogger('service-template')
 

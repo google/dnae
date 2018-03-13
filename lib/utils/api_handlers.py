@@ -128,10 +128,10 @@ class RESTAPIRequest(object):
 
       # pylint: disable=broad-except
       except Exception as e:
-        self._retryrequest(e)
+        self._wait_or_raise_error(e)
       # pylint: enable=broad-except
 
-  def _retryrequest(self, error):
+  def _wait_or_raise_error(self, error):
     self._retry_attempts += 1
     if self._retry_attempts <= self._MAX_RETRIES:
       seconds = 2 ** self._retry_attempts

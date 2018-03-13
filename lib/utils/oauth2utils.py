@@ -75,7 +75,13 @@ class OAuth2Authentication(object):
     """
     flow = client.flow_from_clientsecrets(
         os.path.join(os.getcwd(), secrets_filename), scope=self.__scopes)
-    flags = self.__get_arguments([], __doc__)
+    # Include the default oauth2client argparser
+    parent_parsers = [tools.argparser]
+    parser = argparse.ArgumentParser(
+        description=__doc__,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        parents=parent_parsers)
+    flags = parser.parse_args([])
     storage = oauthFile.Storage(credentials_filename)
     credentials = tools.run_flow(flow, storage, flags)
     http = credentials.authorize(http=httplib2.Http(
@@ -98,27 +104,3 @@ class OAuth2Authentication(object):
     http = credentials.authorize(http=httplib2.Http(
         timeout=_HTTP_TIMEOUT_SECONDS))
     return http
-
-  def __get_arguments(self, argv, desc, parents=None):
-    """Validates and parses command line arguments.
-
-    Args:
-      argv: list of strings, the command-line parameters of the application.
-      desc: string, a description of the sample being executed.
-      parents: list of argparse.ArgumentParser, additional command-line parsers.
-    Returns:
-        The parsed command-line arguments.
-    """
-
-    # Include the default oauth2client argparser
-    parent_parsers = [tools.argparser]
-
-    if parents:
-      parent_parsers.extend(parents)
-
-    parser = argparse.ArgumentParser(
-        description=desc,
-        formatter_class=argparse.RawDescriptionHelpFormatter,
-        parents=parent_parsers)
-
-    return parser.parse_args(argv[1:])
