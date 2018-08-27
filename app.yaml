@@ -12,22 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-#application: <project-id>
-#version: <app-version>
-runtime: python27
-api_version: 1
-threadsafe: yes
+runtime: python37
 instance_class: B2
 basic_scaling:
   max_instances: 5
   idle_timeout: 1m
-
-handlers:
-- url: .*
-  script: appengine_main.app
-
-libraries:
-- name: webapp2
-  version: latest
-- name: ssl
-  version: latest

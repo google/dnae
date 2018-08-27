@@ -39,14 +39,18 @@ SUFFIX_RUN_FILE = '_run.py'
 SUFFIX_SETTINGS_FILE = '_settings.py'
 SUFFIX_TEST_FILE = '_test.py'
 
-APPENGINE_CONFIG_FILE = 'appengine_config.py'
-APPENGINE_MAIN_FILE = 'appengine_main.py'
+APPENGINE_MAIN_FILE = 'main.py'
 APPENGINE_MAIN_PLACEHOLDER1 = ('# Import your "GAE handlers" file (do not '
                                'remove this comment):')
-APPENGINE_MAIN_PLACEHOLDER2 = ('# Add Cron Jobs for your services (do not '
+APPENGINE_MAIN_PLACEHOLDER2 = ('# Add routing rules for your services (do not '
+                               'remove this comment):')
+APPENGINE_MAIN_PLACEHOLDER3 = ('# Add reference to your service folder (do not '
                                'remove this comment):')
 IMPORT_ENTRY_TEMPLATE = 'import %s_gae_handlers'
-CRON_URL_TEMPLATE = "    ('/services/%s/run', %s_gae_handlers.%sLauncher),"
+CRON_URL_TEMPLATE = ("@app.route('/services/%s/run')\n"
+                     "def %s_launcher():\n"
+                     "  return %s_gae_handlers.%s_launcher()\n\n")
+PATH_ENTRY_TEMPLATE = "sys.path.append('services/%s')"
 CRON_FILE = 'cron.yaml'
 CRON_ENTRY_TEMPLATE = ('- description: %s\n  url: /services/%s/run\n  '
                        'schedule: every day 05:00\n  timezone: Europe/Rome')
@@ -55,7 +59,7 @@ DEPLOY_PLACEHOLDER = '# Deploy your service files (do not remove this comment):'
 DEPLOY_ENTRY_TEMPLATE = ("gsutil -m cp './services/%s/*.*' "
                          "'gs://%s-python-sources/'")
 FILES_TO_BACKUP = [
-    APPENGINE_CONFIG_FILE, APPENGINE_MAIN_FILE, CRON_FILE, DEPLOY_FILE
+    APPENGINE_MAIN_FILE, CRON_FILE, DEPLOY_FILE
 ]
 
 
@@ -76,7 +80,7 @@ def replace_service_name(filepath, service_name):
 def main():
 
   print '\n*******************************************'
-  print '* Welcome do the DNA service setup script *'
+  print '* Welcome do the DNAE service setup script *'
   print '*******************************************'
 
   print "\nThis script will help you configure an 'empty' DNA service"
@@ -130,7 +134,6 @@ def main():
 
   print ('\nThis script can also update the following files to include the '
          "references to your new service '%s'") % service_name
-  print '- %s' % APPENGINE_CONFIG_FILE
   print '- %s' % APPENGINE_MAIN_FILE
   print '- %s' % CRON_FILE
   print '- %s' % DEPLOY_FILE
@@ -148,24 +151,21 @@ def main():
   for filepath in FILES_TO_BACKUP:
     copyfile(filepath, BACKUP_MAIN_FOLDER + '/' + filepath)
   print 'Original files backed up in the %s folder' % BACKUP_MAIN_FOLDER
-  print '\nUpdating %s...' % APPENGINE_CONFIG_FILE
-  with open(APPENGINE_CONFIG_FILE, 'a+') as appengine_config_file:
-    appengine_config_file.write("\nvendor.add('%s')" % service_folder)
-    appengine_config_file.close()
-  print '..done.'
-
   print 'Updating %s...' % APPENGINE_MAIN_FILE
   with open(APPENGINE_MAIN_FILE, 'r') as appengine_main_file:
     filedata = appengine_main_file.read()
     appengine_main_file.close()
-  cron_url = CRON_URL_TEMPLATE % (service_name_dash, service_name,
-                                  service_name.title().replace('_', ''))
+  cron_url = CRON_URL_TEMPLATE % (service_name_dash, service_name, service_name,
+                                  service_name)
   import_entry = IMPORT_ENTRY_TEMPLATE % service_name
+  path_entry = PATH_ENTRY_TEMPLATE % service_name_dash
   filedata = (filedata.replace(APPENGINE_MAIN_PLACEHOLDER1,
                                APPENGINE_MAIN_PLACEHOLDER1 + '\n' +
                                import_entry)
               .replace(APPENGINE_MAIN_PLACEHOLDER2,
-                       APPENGINE_MAIN_PLACEHOLDER2 + '\n' + cron_url))
+                       APPENGINE_MAIN_PLACEHOLDER2 + '\n' + cron_url)
+              .replace(APPENGINE_MAIN_PLACEHOLDER3,
+                       APPENGINE_MAIN_PLACEHOLDER3 + '\n' + path_entry))
   with open(APPENGINE_MAIN_FILE, 'w') as appengine_main_file:
     appengine_main_file.write(filedata)
     appengine_main_file.close()

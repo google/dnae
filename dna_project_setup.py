@@ -31,8 +31,8 @@ import errno
 import os
 from shutil import copyfile
 
-from gcloud import exceptions
-from gcloud import storage
+from google.api_core import exceptions
+from google.cloud import storage
 import generate_credential_file
 from googleapiclient import discovery
 from oauth2client.client import GoogleCredentials
@@ -66,7 +66,7 @@ def main():
       'cloudresourcemanager', 'v1', credentials=credentials)
 
   print '***********************************'
-  print '* Welcome do the DNA setup script *'
+  print '* Welcome do the DNAE setup script *'
   print '***********************************'
 
   print '\n***** STEP 0: Backing up the current files ******'

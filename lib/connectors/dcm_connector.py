@@ -18,9 +18,12 @@ This module provides access to DCM Reporting API
 """
 import copy
 import csv
-from StringIO import StringIO
+from io import BytesIO as StringIO
 import time
-import urllib2
+try:
+  from urllib import quote  # Python 2.X
+except ImportError:
+  from urllib.parse import quote  # Python 3+
 
 from api_handlers import APIRequest
 from googleapiclient import discovery
@@ -200,7 +203,7 @@ class DCMConnector(object):
     while True:
       result = self._get_reports_page_result(scope, token)
       report_list += result['items']
-      token = urllib2.quote(result['nextPageToken'], safe='')
+      token = quote(result['nextPageToken'], safe='')
       if not token:
         return report_list
 

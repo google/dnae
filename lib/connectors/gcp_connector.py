@@ -24,13 +24,13 @@ import time
 import uuid
 
 from api_handlers import APIRequest
-from gcloud import bigquery
-from gcloud import datastore
-from gcloud import storage
 from googleapiclient import discovery
 from googleapiclient import http as httpMediaHandler
 from oauth2client.client import GoogleCredentials
 from utils import retry
+from google.cloud import bigquery
+from google.cloud import datastore
+from google.cloud import storage
 
 
 class GCPTable(object):
@@ -167,7 +167,6 @@ class GCPConnector(object):
   _gbq_apiver = 'v2'
   _gce_apiver = 'v1'
   _gds_apiver = 'v1'
-  _gtq_apiver = 'v1beta2'
   _gct_apiver = 'v2beta2'
 
   @retry
@@ -188,8 +187,6 @@ class GCPConnector(object):
         'compute', self._gce_apiver, credentials=credentials)
     self.__gdsapi = discovery.build(
         'datastore', self._gds_apiver, credentials=credentials)
-    self.__gtqapi = discovery.build(
-        'taskqueue', self._gtq_apiver, credentials=credentials)
     self.__gctapi = discovery.build(
         'cloudtasks', self._gct_apiver, credentials=credentials)
 
@@ -526,7 +523,7 @@ class GCPConnector(object):
     self.gce_zone = zone
 
     request = self.__gceapi.images().getFromFamily(
-        project='debian-cloud', family='debian-8')
+        project='debian-cloud', family='debian-9')
     image_response = APIRequest(request).execute()
     source_disk_image = image_response['selfLink']
 
@@ -654,72 +651,6 @@ class GCPConnector(object):
 
   def gds_getapiresource(self):
     return self.__gdsapi
-
-  # App Engine Task Queue
-  def gtq_inserttask(self,
-                     project_id,
-                     queue_name,
-                     payload,
-                     max_leases=None,
-                     tag=None):
-    """Insert new task into AppEngine task queue.
-
-    Args:
-      project_id: Google Cloud project ID
-      queue_name: Taks queue name
-      payload: Task payload
-      max_leases: Maximum number of leases
-      tag: Tag for the task
-    Returns:
-      Task resource for the newly created task (see
-      https://cloud.google.com/appengine/docs/standard/python/taskqueue/rest/tasks#resource)
-    """
-    body = {
-        'queueName': queue_name,
-        'payloadBase64': payload,
-        'leaseTimestamp': long(time.time() * 1e6)
-    }
-    if max_leases:
-      body['retry_count'] = max_leases
-    if tag:
-      body['tag'] = tag
-
-    request = self.__gtqapi.tasks().insert(
-        project=project_id, taskqueue=queue_name, body=body)
-    response = APIRequest(request).execute()
-    return response
-
-  def gtq_leasetask(self, queue_name, lease_secs, num_tasks=1):
-    request = self.__gtqapi.tasks().lease(
-        project=self.project_id,
-        taskqueue=queue_name,
-        leaseSecs=lease_secs,
-        numTasks=num_tasks)
-    response = APIRequest(request).execute()
-    return response
-
-  def gtq_gettask(self, queue_name, task_id):
-    request = self.__gtqapi.tasks().get(
-        project=self.project_id, taskqueue=queue_name, task=task_id)
-    response = APIRequest(request).execute()
-    return response
-
-  def gtq_listtasks(self, queue_name):
-    request = self.__gtqapi.tasks().list(
-        project=self.project_id, taskqueue=queue_name)
-    response = APIRequest(request).execute()
-    return response
-
-  def gtq_deletetask(self, project_id, queue_name, task_id):
-    request = self.__gtqapi.tasks().delete(
-        project=project_id, taskqueue=queue_name, task=task_id)
-    APIRequest(request).execute()
-
-  def gtq_gettaskqueue(self, queue_name):
-    request = self.__gtqapi.taskqueues().get(
-        project='s~' + self.project_id, taskqueue=queue_name, getStats=True)
-    response = APIRequest(request).execute()
-    return response
 
   # Cloud Tasks
   def gct_acknowledgetask(self, task_name, schedule_time):

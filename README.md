@@ -1,13 +1,14 @@
 # DNAE - DoubleClick Network Analysis Enabler
 
-A data integration framework built on top of DoubleClick APIs and Google Cloud
-Platform.
+A data integration framework built on top of Google Marketing Platform (fka
+DoubleClick) APIs and Google Cloud Platform.
 
 ## OVERVIEW
 
-DNAE implements an ETL-like framework that can extract data from the DoubleClick
-Digital Marketing platforms (DBM, DCM, DS), transform it as necessary and load
-transformed data onto Google Cloud Storage and Big Query.
+DNAE implements an ETL-like framework that can extract data from the Google
+Marketing Platform (formerly DoubleClick) platforms (DBM, DCM, DS), transform
+it as necessary and load transformed data onto Google Cloud Storage and Big
+Query.
 Taking advantage of the built-in BigQuery connector, Google DataStudio can be
 used as visualization tool.
 The framework is modular and can implement multiple "services" to provide
@@ -29,13 +30,6 @@ necessary files manually.
 
     ```shell
     pip install -r requirements.txt
-    ```
-
-    -   for AppEngine (downloading the relevant files in the third_party
-        folder):
-
-    ```shell
-    pip install -t third_party -r requirements.txt
     ```
 
 *   Setup your Google Cloud project:
@@ -101,7 +95,7 @@ necessary files manually.
         ```
 
     -   Have a look at the sample service in folder “services/service-example”
-        to see how you can interact with the DoubleClick APIs through the
+        to see how you can interact with the GMP/DoubleClick APIs through the
         connectors included in DNAE, how to get the configuration data from an
         external Spreadsheet, how to elaborate the data before pushing it to Big
         Query and so on..
@@ -185,7 +179,7 @@ A typical DNAE-based service folder will include:
         and the new task is added to the Cloud Tasks queue:
 
         ```python
-        q.add(taskqueue.Task(payload=payload_str, method='PULL'))
+        gcp.gct_createtask(queue_name, payload)
         ```
 
 ## DNAE libraries and folders
@@ -200,10 +194,6 @@ The standard DNAE setup has:
     -   a `core` folder, which includes the main files which will be copied into
         the Compute Engine virtual machine executing each task
     -   a `utils` folder, including different utility libraries
-
-*   A `third_party` folder, populated when running the `pip install -t
-    third_party -r requirements.txt` command, which includes the external
-    libraries needed.
 
 *   A `services` folder, one for each _service_ running in the project and with
     the corresponding files.

@@ -33,9 +33,7 @@ sudo gsutil -m cp "gs://${PROJECT_ROOT}-python-sources/*" .
 
 # Install required python libraries
 sudo easy_install pip
-sudo pip install grpcio
 sudo pip install -r requirements.txt
-sudo pip install --upgrade google-cloud-logging
 
 # Run main service
 python dna_compute_main.py $LEVEL $CE_ENTITY_ID > stdout.txt 2> stderr.txt

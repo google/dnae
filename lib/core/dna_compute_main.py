@@ -69,7 +69,7 @@ def main(argv):
 
     try:
       # The loop will end if there is no more "items" in the queue or if
-      # something goes wrong in the "gcp.gtq_leasetask" call
+      # something goes wrong in the "gcp.gct_leasetask" call
       task_in_queue = False
 
       # Lease the first available task for enough time to make it done

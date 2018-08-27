@@ -42,18 +42,15 @@ from dna_project_settings import PROJECT_ID
 from gcp_connector import GCPConnector
 from utils import TextUtils
 
-import webapp2
 
-
-def task_manager(gcp):
+def task_manager():
   """Task manager function.
 
-  Looks for tasks in the DNA queues and launches CE instances accordingly
-
-  Args:
-    gcp: GCPConnector object.
+  Looks for tasks in the DNA queues and launches CE instances accordingly.
+  Returns:
+      Standard 'OK' string to confirm completed execution.
   """
-
+  gcp = GCPConnector(PROJECT_ID)
   for level in ['l0', 'l1', 'l2', 'l3']:
 
     zone = GCE_MACHINE_MAP[level]['zone']
@@ -89,7 +86,7 @@ def task_manager(gcp):
       for i in range(pool_size):
         machine_id = '%s-%s' % (level, str(i))
         instance_name = 'dna-machine-%s-%s' % (machine_id,
-                                               str(uuid.uuid1().get_hex()))
+                                               str(uuid.uuid1().hex))
         logging.debug('Configuring new machine. ID: [%s]. Instance name: [%s]',
                       machine_id, instance_name)
 
@@ -97,9 +94,9 @@ def task_manager(gcp):
         ce_entity = gcp.gds_insert(
             kind=GDS_KIND_CE_INSTANCE,
             attributes={
-                'name': instance_name.decode(),
-                'zone': zone.decode(),
-                'created': TextUtils.timestamp().decode(),
+                'name': instance_name,
+                'zone': zone,
+                'created': TextUtils.timestamp(),
                 't0': time.time(),
                 'status': None
             })
@@ -150,52 +147,50 @@ def task_manager(gcp):
         ce_entity['status'] = DNA_STATUS_CREATED
         gcp.gds_update(ce_entity)
         logging.debug('CE DataStore entity updated')
+  return 'OK'
 
 
-class ComputeEngineCleanUp(webapp2.RequestHandler):
+def ce_cleanup():
   """Compute Engine Cleanup Handler.
 
     Delete CE instances that have completed their job.
+  Returns:
+      Standard 'OK' string to confirm completed execution.
   """
+  gcp = GCPConnector(PROJECT_ID)
+  ce_entities = gcp.gds_query(GDS_KIND_CE_INSTANCE)
 
-  def get(self):
+  for entity in ce_entities:
 
-    gcp = GCPConnector(PROJECT_ID)
+    startup_failed = False
 
-    ce_entities = gcp.gds_query(GDS_KIND_CE_INSTANCE)
+    if not entity['status']:
+      # Some error creating the machine.
+      logging.warning('[DNA-CLEANUP-COMPUTE] Failed creating machine "%s"',
+                      entity['name'])
+      gcp.gds_delete(entity)
 
-    for entity in ce_entities:
+    if entity['status'] == DNA_STATUS_CREATED:
+      # Calculates seconds elapsed since the machine was created
+      et = time.time() - entity['t0']
+      if et > GCE_MAX_STARTUP_TIME:
+        # After GCE_MAX_STARTUP_TIME seconds we assume that something went
+        # wrong in the startup. Make sure the GCE_MAX_STARTUP_TIME is properly
+        # calibrated according to your typical application startup time
+        logging.warning(
+            '[DNA-CLEANUP-COMPUTE] Startup Failed for machine "%s"',
+            entity['name'])
+        startup_failed = True
 
-      startup_failed = False
-
-      if not entity['status']:
-        # Some error creating the machine.
-        logging.warning('[DNA-CLEANUP-COMPUTE] Failed creating machine "%s"',
-                        entity['name'])
-        gcp.gds_delete(entity)
-
-      if entity['status'] == DNA_STATUS_CREATED:
-        # Calculates seconds elapsed since the machine was created
-        et = time.time() - entity['t0']
-        if et > GCE_MAX_STARTUP_TIME:
-          # After GCE_MAX_STARTUP_TIME seconds we assume that something went
-          # wrong in the startup. Make sure the GCE_MAX_STARTUP_TIME is properly
-          # calibrated according to your typical application startup time
-          logging.warning(
-              '[DNA-CLEANUP-COMPUTE] Startup Failed for machine "%s"',
-              entity['name'])
-          startup_failed = True
-
-      if (entity['status'] == DNA_STATUS_DONE) or startup_failed:
-        # If the CE instance is done or if the startup is failed,
-        # the instance is deleted
-        gcp.gce_deleteinstance(entity['name'], entity['zone'])
-        gcp.gds_delete(entity)
-
-    self.response.write('OK')
+    if (entity['status'] == DNA_STATUS_DONE) or startup_failed:
+      # If the CE instance is done or if the startup is failed,
+      # the instance is deleted
+      gcp.gce_deleteinstance(entity['name'], entity['zone'])
+      gcp.gds_delete(entity)
+  return 'OK'
 
 
-class BigQueryJobStatusCheck(webapp2.RequestHandler):
+def bq_job_status_check():
   """Check BigQuery Job Handler.
 
   Check BigQuery jobs status. To take advantage of this service, you have to
@@ -206,47 +201,42 @@ class BigQueryJobStatusCheck(webapp2.RequestHandler):
                  check the actual status of the job
   - bqerror  --> if an error occurs, the error message is reported here
 
+  Returns:
+      Standard 'OK' string to confirm completed execution.
+
   """
+  gcp = GCPConnector(PROJECT_ID)
+  ds_entities = gcp.gds_query(GDS_KIND_LOG_SERVICE)
 
-  def get(self):
-
-    gcp = GCPConnector(PROJECT_ID)
-
-    ds_entities = gcp.gds_query(GDS_KIND_LOG_SERVICE)
-
-    for entity in ds_entities:
-      if 'bqstatus' in entity:
-        if entity['bqstatus'] == DNA_STATUS_RUNNING:
-          job_info = gcp.bq_getjobinfo(entity['bqjob'])
-          entity['bqstatus'] = job_info['status']['state']
-          if 'errorResult' in job_info['status']:
-            entity['bqstatus'] = DNA_STATUS_FAILED
-            entity['bqerror'] = str(job_info['status']['errors']).decode()
-          gcp.gds_update(entity)
-
-    self.response.write('OK')
+  for entity in ds_entities:
+    if 'bqstatus' in entity:
+      if entity['bqstatus'] == DNA_STATUS_RUNNING:
+        job_info = gcp.bq_getjobinfo(entity['bqjob'])
+        entity['bqstatus'] = job_info['status']['state']
+        if 'errorResult' in job_info['status']:
+          entity['bqstatus'] = DNA_STATUS_FAILED
+          entity['bqerror'] = str(job_info['status']['errors'])
+        gcp.gds_update(entity)
+  return 'OK'
 
 
-class DatastoreCleanUp(webapp2.RequestHandler):
+def ds_cleanup():
   """Datastore Cleanup Handler.
 
-  Remove all DNA-related Datastore entities
+  Remove all DNA-related Datastore entities.
+
+  Returns:
+      Standard 'OK' string to confirm completed execution.
   """
-
-  def get(self):
-
-    gcp = GCPConnector(PROJECT_ID)
-
-    ds_entities = gcp.gds_query(GDS_KIND_CE_INSTANCE)
-    ds_entities += gcp.gds_query(GDS_KIND_LOG_SERVICE)
-
-    for entity in ds_entities:
-      gcp.gds_delete(entity)
-
-    self.response.write('OK')
+  gcp = GCPConnector(PROJECT_ID)
+  ds_entities = gcp.gds_query(GDS_KIND_CE_INSTANCE)
+  ds_entities += gcp.gds_query(GDS_KIND_LOG_SERVICE)
+  for entity in ds_entities:
+    gcp.gds_delete(entity)
+  return 'OK'
 
 
-class CloudStorageCleanUp(webapp2.RequestHandler):
+def cs_cleanup():
   """Cloud Storage Cleanup Handler.
 
   Remove files older then LBW days from a specified GCS bucket.
@@ -257,42 +247,27 @@ class CloudStorageCleanUp(webapp2.RequestHandler):
   - bucket --> name of the bucket to cleanup
   - lbw    --> lookback window
 
+  Returns:
+      Standard 'OK' string to confirm completed execution.
+
   """
+  gcp = GCPConnector(PROJECT_ID)
 
-  def get(self):
+  # GDS_KIND_CLEANUP_GCS entities in Datastore describes which GCS buckets
+  # have to be cleaned
+  cleanup_entities = gcp.gds_query(GDS_KIND_CLEANUP_GCS)
 
-    gcp = GCPConnector(PROJECT_ID)
-
-    # GDS_KIND_CLEANUP_GCS entities in Datastore describes which GCS buckets
-    # have to be cleaned
-    cleanup_entities = gcp.gds_query(GDS_KIND_CLEANUP_GCS)
-
-    for entity in cleanup_entities:
-      for blob in gcp.gcs_getblobs(entity['bucket']):
-        if blob.updated.date().toordinal(
-        ) < datetime.date.today().toordinal() - entity['lbw']:
-          try:
-            blob.delete()
-            logging.info('[DNA-CLEANUP-GCS:%s] File deleted', blob.name)
-          # pylint: disable=broad-except
-          except Exception as e:
-            logging.warning('[DNA-CLEANUP-GCS:%s] Something went wrong - %s',
-                            blob.name,
-                            str(e))
-          # pylint: enable=broad-except
-    self.response.write('OK')
-
-
-class TaskManager(webapp2.RequestHandler):
-  """Task Manager Handler.
-
-  Call the task manager function.
-  """
-
-  def get(self):
-
-    gcp = GCPConnector(PROJECT_ID)
-
-    task_manager(gcp)
-
-    self.response.write('OK')
+  for entity in cleanup_entities:
+    for blob in gcp.gcs_getblobs(entity['bucket']):
+      if blob.updated.date().toordinal(
+      ) < datetime.date.today().toordinal() - entity['lbw']:
+        try:
+          blob.delete()
+          logging.info('[DNA-CLEANUP-GCS:%s] File deleted', blob.name)
+        # pylint: disable=broad-except
+        except Exception as e:
+          logging.warning('[DNA-CLEANUP-GCS:%s] Something went wrong - %s',
+                          blob.name,
+                          str(e))
+        # pylint: enable=broad-except
+  return 'OK'
