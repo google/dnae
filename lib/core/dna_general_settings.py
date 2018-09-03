@@ -20,7 +20,7 @@ General constants and dictionaries definitions.
 from dna_project_settings import GCS_PROJECT_ROOT
 
 # API Versions
-DCM_API_VER = 'v2.8'
+DCM_API_VER = 'v3.2'
 
 # Credentials
 CREDENTIAL_FILE = 'ddmcredentials.dat'
